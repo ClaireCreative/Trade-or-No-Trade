@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade or No Trade? 🔄</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --orange: #f97316;
+    --orange-dark: #c2410c;
+    --teal: #14b8a6;
+    --teal-dark: #0f766e;
+    --green: #22c55e;
+    --red: #ef4444;
+    --purple: #8b5cf6;
+    --bg: #f0fdf9;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 16px 48px;
+    background-image:
+      radial-gradient(circle at 15% 15%, #fed7aa55 0%, transparent 45%),
+      radial-gradient(circle at 85% 80%, #99f6e455 0%, transparent 45%);
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    margin-bottom: 14px;
+    animation: bounceIn 0.6s ease;
+  }
+  .header h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 5vw, 3rem);
+    color: var(--text);
+    line-height: 1;
+  }
+  .header p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 700;
+  }
+
+  /* PROGRESS */
+  .progress-wrap {
+    width: min(700px, 95vw);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .progress-bar {
+    flex: 1;
+    height: 13px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--teal), var(--orange));
+    border-radius: 999px;
+    transition: width 0.5s ease;
+  }
+  .progress-label {
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  /* STAGE */
+  .stage {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    width: min(820px, 98vw);
+    justify-content: center;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--card);
+    border-radius: 26px;
+    padding: 26px 26px 22px;
+    width: 320px;
+    flex-shrink: 0;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+    text-align: center;
+    animation: slideUp 0.4s ease;
+    position: relative;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 6px;
+    border-radius: 26px 26px 0 0;
+    background: linear-gradient(90deg, var(--teal), var(--purple), var(--orange));
+  }
+
+  .score-badge {
+    position: absolute;
+    top: 14px; right: 14px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    color: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.88rem;
+    padding: 4px 11px;
+    border-radius: 999px;
+  }
+
+  /* CARRY "1" — absolutely positioned above tens digit */
+  .carry-1 {
+    display: none;
+    position: absolute;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.15rem;
+    color: #ef4444;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .carry-1.show {
+    display: block;
+    animation: popIn 0.35s ease;
+  }
+
+  /* EQUATION */
+  .equation-box {
+    background: #f8fafc;
+    border: 3px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 28px 24px 14px;
+    display: inline-block;
+    margin: 10px auto 18px;
+    position: relative;
+    overflow: visible;
+  }
+  /* Each row: operator col + tens cell + ones cell */
+  .eq-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    line-height: 1.1;
+  }
+  .eq-op {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.2rem;
+    color: var(--muted);
+    width: 38px;
+    text-align: left;
+    flex-shrink: 0;
+  }
+  .eq-op.hidden { visibility: hidden; }
+  /* Each digit gets its own fixed-width box */
+  .d-cell {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.6rem, 8vw, 3.6rem);
+    color: var(--text);
+    width: 52px;
+    text-align: center;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .eq-divider {
+    border: none;
+    border-top: 4px solid #334155;
+    border-radius: 2px;
+    margin: 6px 0 4px;
+    width: 100%;
+    display: block;
+  }
+  .eq-answer {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.6rem, 8vw, 3.6rem);
+    color: #cbd5e1;
+    line-height: 1.1;
+    min-height: 1.2em;
+    display: flex;
+    justify-content: flex-end;
+    transition: color 0.2s;
+  }
+  .eq-answer.revealed {
+    color: var(--text);
+    animation: popIn 0.35s ease;
+  }
+  .ans-cell {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.6rem, 8vw, 3.6rem);
+    width: 52px;
+    text-align: center;
+    display: inline-block;
+    flex-shrink: 0;
+    color: inherit;
+  }
+
+  /* HINT */
+  .hint-text {
+    font-size: 0.88rem;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+  .hl-teal   { color: var(--teal-dark); font-size: 1rem; font-weight: 800; }
+  .hl-orange { color: var(--orange);    font-size: 1rem; font-weight: 800; }
+
+  /* BUTTONS */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+  .btn-choice {
+    flex: 1;
+    padding: 14px 0;
+    border: none;
+    border-radius: 15px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.35rem;
+    cursor: pointer;
+    transition: transform 0.12s, box-shadow 0.12s;
+    box-shadow: 0 5px 0 rgba(0,0,0,0.14);
+    position: relative;
+    top: 0;
+    line-height: 1.2;
+  }
+  .btn-choice:active { top: 4px; box-shadow: 0 1px 0 rgba(0,0,0,0.14); }
+  .btn-yes { background: linear-gradient(135deg, #14b8a6, #0f766e); color: white; }
+  .btn-yes:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 0 rgba(15,118,110,0.38); }
+  .btn-no  { background: linear-gradient(135deg, #f97316, #ea580c); color: white; }
+  .btn-no:hover:not(:disabled)  { transform: translateY(-3px); box-shadow: 0 8px 0 rgba(234,88,12,0.38); }
+  .btn-choice:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+  .btn-sub { font-size: 0.68rem; font-family: 'Nunito', sans-serif; font-weight: 800; display: block; }
+
+  .btn-choice.correct { outline: 4px solid #22c55e; outline-offset: 3px; animation: pulseGreen 0.45s ease; }
+  .btn-choice.wrong   { outline: 4px solid #ef4444; outline-offset: 3px; animation: shake 0.4s ease; }
+
+  .btn-next {
+    margin-top: 14px;
+    padding: 11px 30px;
+    background: linear-gradient(135deg, var(--purple), #7c3aed);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.15rem;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(124,58,237,0.38);
+    transition: transform 0.12s;
+    display: none;
+  }
+  .btn-next:hover { transform: translateY(-2px); }
+  .btn-next.show  { display: inline-block; animation: fadeUp 0.3s ease; }
+
+  /* REASON PANEL */
+  .reason-panel {
+    background: var(--card);
+    border-radius: 22px;
+    padding: 22px 20px;
+    width: 250px;
+    flex-shrink: 0;
+    box-shadow: 0 8px 36px rgba(0,0,0,0.09);
+    display: none;
+    align-self: flex-start;
+  }
+  .reason-panel.show { display: block; animation: slideLeft 0.35s ease; }
+  .reason-panel.correct-panel { border-top: 6px solid var(--green); }
+  .reason-panel.wrong-panel   { border-top: 6px solid var(--red); }
+
+  .rp-emoji { font-size: 2rem; display: block; margin-bottom: 6px; }
+  .rp-title { font-family: 'Fredoka One', cursive; font-size: 1.25rem; margin-bottom: 6px; }
+  .rp-title.ok  { color: #15803d; }
+  .rp-title.err { color: #b91c1c; }
+  .rp-verdict { font-size: 0.95rem; font-weight: 800; color: var(--text); margin-bottom: 10px; line-height: 1.4; }
+  .rp-reason { font-size: 0.88rem; font-weight: 600; color: #475569; line-height: 1.65; }
+  .rp-reason strong { color: var(--text); }
+  .tag-t { background: #ccfbf1; color: #0f766e; border-radius: 4px; padding: 0 4px; font-weight: 800; }
+  .tag-o { background: #ffedd5; color: #c2410c; border-radius: 4px; padding: 0 4px; font-weight: 800; }
+  .rp-rule {
+    margin-top: 11px;
+    padding: 9px 11px;
+    background: #f1f5f9;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* SCORE SCREEN */
+  .score-screen { display: none; text-align: center; padding: 6px 0; }
+  .score-screen.show { display: block; animation: bounceIn 0.5s ease; }
+  .score-screen .big-emoji { font-size: 4rem; }
+  .score-screen h2 { font-family: 'Fredoka One', cursive; font-size: 1.9rem; color: var(--text); margin: 8px 0 2px; }
+  .score-num { font-family: 'Fredoka One', cursive; font-size: 3.2rem; color: var(--teal); line-height: 1; margin-bottom: 6px; }
+  .score-screen p { color: var(--muted); font-weight: 700; margin-bottom: 18px; font-size: 0.95rem; }
+  .btn-restart {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.15rem;
+    cursor: pointer;
+    box-shadow: 0 5px 0 rgba(15,118,110,0.38);
+    transition: transform 0.12s;
+  }
+  .btn-restart:hover { transform: translateY(-2px); }
+
+  /* ANIMATIONS */
+  @keyframes bounceIn {
+    0%   { transform: scale(0.8); opacity: 0; }
+    60%  { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(28px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  @keyframes slideLeft {
+    from { transform: translateX(24px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  @keyframes fadeUp {
+    from { transform: translateY(10px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  @keyframes popIn {
+    0%   { transform: scale(0.5); opacity: 0; }
+    75%  { transform: scale(1.12); }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+  @keyframes pulseGreen {
+    0%,100% { box-shadow: 0 5px 0 rgba(0,0,0,0.14); }
+    50%     { box-shadow: 0 0 16px #22c55e, 0 5px 0 rgba(0,0,0,0.14); }
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25%     { transform: translateX(-7px); }
+    75%     { transform: translateX(7px); }
+  }
+
+  @media (max-width: 620px) {
+    .stage { flex-direction: column; align-items: center; }
+    .reason-panel { width: min(320px, 94vw); align-self: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔄 Trade or No Trade?</h1>
+  <p>Does this addition need trading (regrouping)?</p>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-label" id="progressLabel">1 / 20</div>
+</div>
+
+<div class="stage">
+
+  <!-- CARD -->
+  <div class="card" id="mainCard">
+    <div class="score-badge" id="scoreBadge">⭐ 0</div>
+
+    <div id="questionView">
+      <div class="equation-box">
+        <!-- carry "1" absolutely positioned over tens digit -->
+        <span class="carry-1" id="carryOne">1</span>
+        <!-- top number row -->
+        <div class="eq-row">
+          <span class="eq-op hidden">+</span>
+          <span class="d-cell" id="eqTopTens">3</span>
+          <span class="d-cell" id="eqTopOnes">4</span>
+        </div>
+        <!-- bottom number row -->
+        <div class="eq-row">
+          <span class="eq-op">+</span>
+          <span class="d-cell" id="eqBotTens">4</span>
+          <span class="d-cell" id="eqBotOnes">7</span>
+        </div>
+        <!-- divider line -->
+        <hr class="eq-divider">
+        <!-- answer row -->
+        <div class="eq-answer" id="eqAnswer">
+          <span class="ans-cell" id="eqAnsTens">?</span>
+          <span class="ans-cell" id="eqAnsOnes"> </span>
+        </div>
+      </div>
+
+      <div class="hint-text">
+        Ones on top: <span class="hl-teal" id="onesTop">4</span>
+        &nbsp;+&nbsp;
+        Ones on bottom: <span class="hl-orange" id="onesBot">7</span>
+        &nbsp;=&nbsp;
+        <span id="onesSum" style="font-weight:800;color:#1e293b">11</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-choice btn-yes" id="btnYes" onclick="answer(true)">
+          🔄 TRADE<span class="btn-sub">Yes, regroup!</span>
+        </button>
+        <button class="btn-choice btn-no" id="btnNo" onclick="answer(false)">
+          ✋ NO TRADE<span class="btn-sub">No regroup</span>
+        </button>
+      </div>
+
+      <button class="btn-next" id="btnNext" onclick="nextQuestion()">Next ➜</button>
+    </div>
+
+    <!-- Score screen -->
+    <div class="score-screen" id="scoreScreen">
+      <div class="big-emoji" id="finalEmoji">🌟</div>
+      <h2>All Done!</h2>
+      <div class="score-num" id="finalScore">0/20</div>
+      <p id="finalMsg">Great work!</p>
+      <button class="btn-restart" onclick="restart()">🔄 Play Again</button>
+    </div>
+  </div>
+
+  <!-- REASON PANEL -->
+  <div class="reason-panel" id="reasonPanel">
+    <span class="rp-emoji" id="rpEmoji">🎉</span>
+    <div class="rp-title" id="rpTitle">Correct!</div>
+    <div class="rp-verdict" id="rpVerdict"></div>
+    <div class="rp-reason" id="rpReason"></div>
+    <div class="rp-rule"   id="rpRule"></div>
+  </div>
+
+</div>
+
+<script>
+const ALL_Qs = [
+  { top: 34, bot: 47 },
+  { top: 25, bot: 63 },
+  { top: 41, bot: 38 },
+  { top: 56, bot: 27 },
+  { top: 72, bot: 15 },
+  { top: 48, bot: 34 },
+  { top: 19, bot: 53 },
+  { top: 63, bot: 28 },
+  { top: 37, bot: 46 },
+  { top: 51, bot: 22 },
+  { top: 29, bot: 64 },
+  { top: 45, bot: 38 },
+  { top: 76, bot: 17 },
+  { top: 33, bot: 49 },
+  { top: 58, bot: 31 },
+  { top: 27, bot: 55 },
+  { top: 62, bot: 24 },
+  { top: 44, bot: 39 },
+  { top: 81, bot: 16 },
+  { top: 35, bot: 57 },
+];
+ALL_Qs.forEach(q => {
+  q.answer   = q.top + q.bot;
+  q.onesSum  = (q.top % 10) + (q.bot % 10);
+  q.needsTrade = q.onesSum >= 10;
+});
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+let Qs = shuffle(ALL_Qs);
+let cur = 0, score = 0, done = false;
+
+// ── Sound effects ─────────────────────────────────────────────────
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function playCorrect() {
+  [[523.25,0,0.12],[659.25,0.13,0.12],[783.99,0.26,0.18]].forEach(([freq,when,dur])=>{
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(AC.destination);
+    o.type='sine';o.frequency.value=freq;
+    const t=AC.currentTime+when;
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(0.28,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+    o.start(t);o.stop(t+dur+0.05);
+  });
+}
+
+function playWrong() {
+  [[220,0,0.08],[180,0.09,0.08],[140,0.18,0.14]].forEach(([freq,when,dur])=>{
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(AC.destination);
+    o.type='sawtooth';o.frequency.value=freq;
+    const t=AC.currentTime+when;
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(0.18,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+    o.start(t);o.stop(t+dur+0.05);
+  });
+}
+
+function playFinish() {
+  // Happy ascending fanfare: C E G C(high) + sparkle
+  const notes = [
+    [523.25,0,     0.18],
+    [659.25,0.20,  0.18],
+    [783.99,0.40,  0.18],
+    [1046.5,0.60,  0.30],
+    [1318.5,0.90,  0.20],
+    [1046.5,1.10,  0.12],
+    [1318.5,1.22,  0.35],
+  ];
+  notes.forEach(([freq,when,dur])=>{
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(AC.destination);
+    o.type='sine';o.frequency.value=freq;
+    const t=AC.currentTime+when;
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(0.32,t+0.03);
+    g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+    o.start(t);o.stop(t+dur+0.06);
+  });
+  // add a soft triangle shimmer on top
+  [800,1200,1600].forEach((freq,i)=>{
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(AC.destination);
+    o.type='triangle';o.frequency.value=freq;
+    const t=AC.currentTime+0.6+i*0.15;
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(0.10,t+0.04);
+    g.gain.exponentialRampToValueAtTime(0.001,t+0.25);
+    o.start(t);o.stop(t+0.32);
+  });
+}
+// ─────────────────────────────────────────────────────────────────
+
+function load() {
+  done = false;
+  const q = Qs[cur];
+  const oT = q.top % 10, oB = q.bot % 10;
+
+  const tT = Math.floor(q.top/10), oT2 = q.top%10;
+  const tB = Math.floor(q.bot/10), oB2 = q.bot%10;
+  set('eqTopTens', tT); set('eqTopOnes', oT2);
+  set('eqBotTens', tB); set('eqBotOnes', oB2);
+  // reset answer cells
+  get('eqAnsTens').textContent = '?';
+  get('eqAnsOnes').textContent = ' ';
+  get('eqAnswer').classList.remove('revealed');
+  get('carryOne').className = 'carry-1'; // hide carry
+  set('onesTop', oT);
+  set('onesBot', oB);
+  set('onesSum', oT + oB);
+
+  ['btnYes','btnNo'].forEach(id => {
+    const b = get(id);
+    b.disabled = false;
+    b.className = id==='btnYes' ? 'btn-choice btn-yes' : 'btn-choice btn-no';
+  });
+
+  get('btnNext').className = 'btn-next';
+  get('reasonPanel').className = 'reason-panel';
+
+  get('progressLabel').textContent = `${cur+1} / ${Qs.length}`;
+  get('progressFill').style.width  = `${(cur/Qs.length)*100}%`;
+}
+
+function answer(yes) {
+  if (done) return;
+  done = true;
+
+  const q = Qs[cur];
+  const correct = (yes === q.needsTrade);
+  const oT = q.top % 10, oB = q.bot % 10;
+
+  if (AC.state === 'suspended') AC.resume();
+  correct ? playCorrect() : playWrong();
+
+  ['btnYes','btnNo'].forEach(id => get(id).disabled = true);
+  const btn = get(yes ? 'btnYes' : 'btnNo');
+  btn.className += correct ? ' correct' : ' wrong';
+
+  setTimeout(() => {
+    const ansTens = Math.floor(q.answer/10);
+    const ansOnes = q.answer%10;
+    // for 3-digit answers (e.g. 99+11=110) show hundreds+tens in tens cell
+    if (q.answer >= 100) {
+      get('eqAnsTens').textContent = Math.floor(q.answer/10); // e.g. "11"
+      get('eqAnsOnes').textContent = ansOnes;
+    } else {
+      get('eqAnsTens').textContent = ansTens;
+      get('eqAnsOnes').textContent = ansOnes;
+    }
+    get('eqAnswer').classList.add('revealed');
+    // Show red carry "1" above tens digit when trading needed
+    if (q.needsTrade) {
+      const c       = get('carryOne');
+      const tenCell = get('eqTopTens');
+      const box     = document.querySelector('.equation-box');
+      const boxRect = box.getBoundingClientRect();
+      const cellRect= tenCell.getBoundingClientRect();
+      c.style.left  = (cellRect.left - boxRect.left + cellRect.width/2 - 8) + 'px';
+      c.style.top   = (tenCell.offsetTop - 22) + 'px';
+      c.className   = 'carry-1 show';
+    }
+  }, 180);
+
+  if (correct) {
+    score++;
+    set('scoreBadge', `⭐ ${score}`);
+  }
+
+  // Build reason panel
+  const goodEmojis = ['🎉','⭐','🌟','🎊','👏','✨'];
+  const badEmojis  = ['🤔','💡','🧐','📚'];
+  set('rpEmoji', (correct ? goodEmojis : badEmojis)[Math.floor(Math.random()*(correct?6:4))]);
+
+  const titleEl = get('rpTitle');
+  titleEl.textContent = correct ? 'Correct!' : 'Not quite!';
+  titleEl.className   = 'rp-title ' + (correct ? 'ok' : 'err');
+
+  if (q.needsTrade) {
+    set('rpVerdict', `TRADE! — Regrouping needed! 🔄`);
+    get('rpReason').innerHTML =
+      `The ones digits are <span class="tag-t">${oT}</span> + <span class="tag-o">${oB}</span> = <strong>${q.onesSum}</strong>.<br><br>`+
+      `Since <strong>${q.onesSum} ≥ 10</strong>, the ones column is full — we need to trade!`;
+    get('rpRule').innerHTML =
+      `📦 Trade 10 ones → 1 ten!<br>${q.onesSum} ones = <strong>1 ten</strong> and <strong>${q.onesSum-10} ones</strong>.<br>Carry the <span style="color:#ef4444;font-weight:800">1</span> to the tens place!`;
+  } else {
+    set('rpVerdict', `NO TRADE — No regrouping needed! ✋`);
+    get('rpReason').innerHTML =
+      `The ones digits are <span class="tag-t">${oT}</span> + <span class="tag-o">${oB}</span> = <strong>${q.onesSum}</strong>.<br><br>`+
+      `Since <strong>${q.onesSum} &lt; 10</strong>, there's room — no trading needed!`;
+    get('rpRule').innerHTML =
+      `✅ Ones stay put — nothing to carry!<br>${oT} + ${oB} = ${q.onesSum}. Just write it down!`;
+  }
+
+  get('reasonPanel').className = 'reason-panel show ' + (correct ? 'correct-panel' : 'wrong-panel');
+  get('btnNext').className = 'btn-next show';
+}
+
+function nextQuestion() {
+  cur++;
+  if (cur >= Qs.length) { showScore(); return; }
+  const c = get('mainCard');
+  c.style.animation = 'none';
+  void c.offsetWidth;
+  c.style.animation = 'slideUp 0.4s ease';
+  load();
+}
+
+function showScore() {
+  if (AC.state === 'suspended') AC.resume();
+  playFinish();
+
+  get('questionView').style.display = 'none';
+  get('reasonPanel').className = 'reason-panel';
+  get('scoreScreen').className = 'score-screen show';
+
+  const pct = score / Qs.length;
+  const [emoji, msg] = pct===1    ? ['🏆','Perfect! You\'re a trading superstar! 🌟']
+    : pct>=.85 ? ['🌟','Amazing work! Almost perfect!']
+    : pct>=.65 ? ['👍','Good job! Keep practicing!']
+    : ['💪','Nice try! Give it another go!'];
+
+  set('finalEmoji', emoji);
+  set('finalScore', `${score}/${Qs.length}`);
+  set('finalMsg',   msg);
+  get('progressFill').style.width = '100%';
+  set('progressLabel', 'All done!');
+}
+
+function restart() {
+  Qs = shuffle(ALL_Qs);   // fresh random order every game
+  cur = 0; score = 0;
+  set('scoreBadge', '⭐ 0');
+  get('scoreScreen').className = 'score-screen';
+  get('questionView').style.display = 'block';
+  load();
+}
+
+function get(id) { return document.getElementById(id); }
+function set(id, v) { get(id).textContent = v; }
+
+load();
+</script>
+</body>
+</html>
